@@ -1,0 +1,5 @@
+# nvidia binaries files
+/vendor/nvidia/tegra/
+
+# compilation output
+/out/

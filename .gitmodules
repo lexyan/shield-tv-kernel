@@ -1,3 +1,0 @@
-[submodule "external/icu"]
-	path = external/icu
-	url = git://nv-tegra.nvidia.com/android/platform/external/icu
