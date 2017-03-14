@@ -1,5 +1,10 @@
 # nvidia binaries files
 /vendor/nvidia/tegra/
 
+# other platform large files
+/device/nvidia/platform/falcon/
+/device/nvidia/platform/hawkeye/
+/device/nvidia/platform/t210/assets/
+
 # compilation output
 /out/

@@ -228,6 +228,11 @@ on init
     # expecting it to point to /proc/self/fd
     symlink /proc/self/fd /dev/fd
 
+    # make dvb directory for dvb sticks
+    mkdir /dev/dvb 0770 root system
+    chmod 0770 /dev/dvb
+    chown root system /dev/dvb
+
 # Healthd can trigger a full boot from charger mode by signaling this
 # property when the power button is held.
 on property:sys.boot_from_charger_mode=1
