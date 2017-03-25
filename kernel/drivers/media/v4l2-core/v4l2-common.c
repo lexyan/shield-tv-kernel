@@ -61,7 +61,6 @@
 #include <media/v4l2-common.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
-#include <media/v4l2-chip-ident.h>
 
 #include <linux/videodev2.h>
 
@@ -81,40 +80,14 @@ MODULE_LICENSE("GPL");
 
 /* Helper functions for control handling			     */
 
-/* Check for correctness of the ctrl's value based on the data from
-   struct v4l2_queryctrl and the available menu items. Note that
-   menu_items may be NULL, in that case it is ignored. */
-int v4l2_ctrl_check(struct v4l2_ext_control *ctrl, struct v4l2_queryctrl *qctrl,
-		const char * const *menu_items)
-{
-	if (qctrl->flags & V4L2_CTRL_FLAG_DISABLED)
-		return -EINVAL;
-	if (qctrl->flags & V4L2_CTRL_FLAG_GRABBED)
-		return -EBUSY;
-	if (qctrl->type == V4L2_CTRL_TYPE_STRING)
-		return 0;
-	if (qctrl->type == V4L2_CTRL_TYPE_BUTTON ||
-	    qctrl->type == V4L2_CTRL_TYPE_INTEGER64 ||
-	    qctrl->type == V4L2_CTRL_TYPE_CTRL_CLASS)
-		return 0;
-	if (ctrl->value < qctrl->minimum || ctrl->value > qctrl->maximum)
-		return -ERANGE;
-	if (qctrl->type == V4L2_CTRL_TYPE_MENU && menu_items != NULL) {
-		if (menu_items[ctrl->value] == NULL ||
-		    menu_items[ctrl->value][0] == '\0')
-			return -EINVAL;
-	}
-	if (qctrl->type == V4L2_CTRL_TYPE_BITMASK &&
-			(ctrl->value & ~qctrl->maximum))
-		return -ERANGE;
-	return 0;
-}
-EXPORT_SYMBOL(v4l2_ctrl_check);
-
 /* Fill in a struct v4l2_queryctrl */
-int v4l2_ctrl_query_fill(struct v4l2_queryctrl *qctrl, s32 min, s32 max, s32 step, s32 def)
+int v4l2_ctrl_query_fill(struct v4l2_queryctrl *qctrl, s32 _min, s32 _max, s32 _step, s32 _def)
 {
 	const char *name;
+	s64 min = _min;
+	s64 max = _max;
+	u64 step = _step;
+	s64 def = _def;
 
 	v4l2_ctrl_fill(qctrl->id, &name, &qctrl->type,
 		       &min, &max, &step, &def, &qctrl->flags);
@@ -132,157 +105,9 @@ int v4l2_ctrl_query_fill(struct v4l2_queryctrl *qctrl, s32 min, s32 max, s32 ste
 }
 EXPORT_SYMBOL(v4l2_ctrl_query_fill);
 
-/* Fill in a struct v4l2_querymenu based on the struct v4l2_queryctrl and
-   the menu. The qctrl pointer may be NULL, in which case it is ignored.
-   If menu_items is NULL, then the menu items are retrieved using
-   v4l2_ctrl_get_menu. */
-int v4l2_ctrl_query_menu(struct v4l2_querymenu *qmenu, struct v4l2_queryctrl *qctrl,
-	       const char * const *menu_items)
-{
-	int i;
-
-	qmenu->reserved = 0;
-	if (menu_items == NULL)
-		menu_items = v4l2_ctrl_get_menu(qmenu->id);
-	if (menu_items == NULL ||
-	    (qctrl && (qmenu->index < qctrl->minimum || qmenu->index > qctrl->maximum)))
-		return -EINVAL;
-	for (i = 0; i < qmenu->index && menu_items[i]; i++) ;
-	if (menu_items[i] == NULL || menu_items[i][0] == '\0')
-		return -EINVAL;
-	strlcpy(qmenu->name, menu_items[qmenu->index], sizeof(qmenu->name));
-	return 0;
-}
-EXPORT_SYMBOL(v4l2_ctrl_query_menu);
-
-/* Fill in a struct v4l2_querymenu based on the specified array of valid
-   menu items (terminated by V4L2_CTRL_MENU_IDS_END).
-   Use this if there are 'holes' in the list of valid menu items. */
-int v4l2_ctrl_query_menu_valid_items(struct v4l2_querymenu *qmenu, const u32 *ids)
-{
-	const char * const *menu_items = v4l2_ctrl_get_menu(qmenu->id);
-
-	qmenu->reserved = 0;
-	if (menu_items == NULL || ids == NULL)
-		return -EINVAL;
-	while (*ids != V4L2_CTRL_MENU_IDS_END) {
-		if (*ids++ == qmenu->index) {
-			strlcpy(qmenu->name, menu_items[qmenu->index],
-					sizeof(qmenu->name));
-			return 0;
-		}
-	}
-	return -EINVAL;
-}
-EXPORT_SYMBOL(v4l2_ctrl_query_menu_valid_items);
-
-/* ctrl_classes points to an array of u32 pointers, the last element is
-   a NULL pointer. Each u32 array is a 0-terminated array of control IDs.
-   Each array must be sorted low to high and belong to the same control
-   class. The array of u32 pointers must also be sorted, from low class IDs
-   to high class IDs.
-
-   This function returns the first ID that follows after the given ID.
-   When no more controls are available 0 is returned. */
-u32 v4l2_ctrl_next(const u32 * const * ctrl_classes, u32 id)
-{
-	u32 ctrl_class = V4L2_CTRL_ID2CLASS(id);
-	const u32 *pctrl;
-
-	if (ctrl_classes == NULL)
-		return 0;
-
-	/* if no query is desired, then check if the ID is part of ctrl_classes */
-	if ((id & V4L2_CTRL_FLAG_NEXT_CTRL) == 0) {
-		/* find class */
-		while (*ctrl_classes && V4L2_CTRL_ID2CLASS(**ctrl_classes) != ctrl_class)
-			ctrl_classes++;
-		if (*ctrl_classes == NULL)
-			return 0;
-		pctrl = *ctrl_classes;
-		/* find control ID */
-		while (*pctrl && *pctrl != id) pctrl++;
-		return *pctrl ? id : 0;
-	}
-	id &= V4L2_CTRL_ID_MASK;
-	id++;	/* select next control */
-	/* find first class that matches (or is greater than) the class of
-	   the ID */
-	while (*ctrl_classes && V4L2_CTRL_ID2CLASS(**ctrl_classes) < ctrl_class)
-		ctrl_classes++;
-	/* no more classes */
-	if (*ctrl_classes == NULL)
-		return 0;
-	pctrl = *ctrl_classes;
-	/* find first ctrl within the class that is >= ID */
-	while (*pctrl && *pctrl < id) pctrl++;
-	if (*pctrl)
-		return *pctrl;
-	/* we are at the end of the controls of the current class. */
-	/* continue with next class if available */
-	ctrl_classes++;
-	if (*ctrl_classes == NULL)
-		return 0;
-	return **ctrl_classes;
-}
-EXPORT_SYMBOL(v4l2_ctrl_next);
-
-int v4l2_chip_match_host(const struct v4l2_dbg_match *match)
-{
-	switch (match->type) {
-	case V4L2_CHIP_MATCH_BRIDGE:
-		return match->addr == 0;
-	default:
-		return 0;
-	}
-}
-EXPORT_SYMBOL(v4l2_chip_match_host);
-
-#if IS_ENABLED(CONFIG_I2C)
-int v4l2_chip_match_i2c_client(struct i2c_client *c, const struct v4l2_dbg_match *match)
-{
-	int len;
-
-	if (c == NULL || match == NULL)
-		return 0;
-
-	switch (match->type) {
-	case V4L2_CHIP_MATCH_I2C_DRIVER:
-		if (c->driver == NULL || c->driver->driver.name == NULL)
-			return 0;
-		len = strlen(c->driver->driver.name);
-		return len && !strncmp(c->driver->driver.name, match->name, len);
-	case V4L2_CHIP_MATCH_I2C_ADDR:
-		return c->addr == match->addr;
-	case V4L2_CHIP_MATCH_SUBDEV:
-		return 1;
-	default:
-		return 0;
-	}
-}
-EXPORT_SYMBOL(v4l2_chip_match_i2c_client);
-
-int v4l2_chip_ident_i2c_client(struct i2c_client *c, struct v4l2_dbg_chip_ident *chip,
-		u32 ident, u32 revision)
-{
-	if (!v4l2_chip_match_i2c_client(c, &chip->match))
-		return 0;
-	if (chip->ident == V4L2_IDENT_NONE) {
-		chip->ident = ident;
-		chip->revision = revision;
-	}
-	else {
-		chip->ident = V4L2_IDENT_AMBIGUOUS;
-		chip->revision = 0;
-	}
-	return 0;
-}
-EXPORT_SYMBOL(v4l2_chip_ident_i2c_client);
-
-/* ----------------------------------------------------------------- */
-
 /* I2C Helper functions */
 
+#if IS_ENABLED(CONFIG_I2C)
 
 void v4l2_i2c_subdev_init(struct v4l2_subdev *sd, struct i2c_client *client,
 		const struct v4l2_subdev_ops *ops)
@@ -290,18 +115,17 @@ void v4l2_i2c_subdev_init(struct v4l2_subdev *sd, struct i2c_client *client,
 	v4l2_subdev_init(sd, ops);
 	sd->flags |= V4L2_SUBDEV_FL_IS_I2C;
 	/* the owner is the same as the i2c_client's driver owner */
-	sd->owner = client->driver->driver.owner;
+	sd->owner = client->dev.driver->owner;
+	sd->dev = &client->dev;
 	/* i2c_client and v4l2_subdev point to one another */
 	v4l2_set_subdevdata(sd, client);
 	i2c_set_clientdata(client, sd);
 	/* initialize name */
 	snprintf(sd->name, sizeof(sd->name), "%s %d-%04x",
-		client->driver->driver.name, i2c_adapter_id(client->adapter),
+		client->dev.driver->name, i2c_adapter_id(client->adapter),
 		client->addr);
 }
 EXPORT_SYMBOL_GPL(v4l2_i2c_subdev_init);
-
-
 
 /* Load an i2c sub-device. */
 struct v4l2_subdev *v4l2_i2c_new_subdev_board(struct v4l2_device *v4l2_dev,
@@ -329,11 +153,11 @@ struct v4l2_subdev *v4l2_i2c_new_subdev_board(struct v4l2_device *v4l2_dev,
 	   loaded. This delay-load mechanism doesn't work if other drivers
 	   want to use the i2c device, so explicitly loading the module
 	   is the best alternative. */
-	if (client == NULL || client->driver == NULL)
+	if (client == NULL || client->dev.driver == NULL)
 		goto error;
 
 	/* Lock the module so we can safely get the v4l2_subdev pointer */
-	if (!try_module_get(client->driver->driver.owner))
+	if (!try_module_get(client->dev.driver->owner))
 		goto error;
 	sd = i2c_get_clientdata(client);
 
@@ -342,7 +166,7 @@ struct v4l2_subdev *v4l2_i2c_new_subdev_board(struct v4l2_device *v4l2_dev,
 	if (v4l2_device_register_subdev(v4l2_dev, sd))
 		sd = NULL;
 	/* Decrease the module use count to match the first try_module_get. */
-	module_put(client->driver->driver.owner);
+	module_put(client->dev.driver->owner);
 
 error:
 	/* If we have a client but no subdev, then something went wrong and
@@ -426,6 +250,7 @@ void v4l2_spi_subdev_init(struct v4l2_subdev *sd, struct spi_device *spi,
 	sd->flags |= V4L2_SUBDEV_FL_IS_SPI;
 	/* the owner is the same as the spi_device's driver owner */
 	sd->owner = spi->dev.driver->owner;
+	sd->dev = &spi->dev;
 	/* spi_device and v4l2_subdev point to one another */
 	v4l2_set_subdevdata(sd, spi);
 	spi_set_drvdata(spi, sd);

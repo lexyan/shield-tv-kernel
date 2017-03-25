@@ -16,6 +16,7 @@
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
 #include <linux/slab.h>
+#include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/irq.h>
@@ -52,13 +53,12 @@ static int gpio_ir_recv_get_devtree_pdata(struct device *dev,
 	pdata->gpio_nr = gpio;
 	pdata->active_low = (flags & OF_GPIO_ACTIVE_LOW);
 	if (of_property_read_u32(np, "min-delay", &pdata->min_delay))
-		pdata->min_delay = 0;
+		pdata->min_delay = 0;	
 	/* probe() takes care of map_name == NULL or allowed_protos == 0 */
 	pdata->map_name = of_get_property(np, "linux,rc-map-name", NULL);
-
+//	pdata->allowed_protos = 0;
 	if (of_property_read_u64(np, "allowed-protos", &pdata->allowed_protos))
 		pdata->allowed_protos = 0;
-
 	return 0;
 }
 
@@ -149,9 +149,9 @@ static int gpio_ir_recv_probe(struct platform_device *pdev)
 	rcdev->driver_name = GPIO_IR_DRIVER_NAME;
 	rcdev->min_delay = pdata->min_delay;
 	if (pdata->allowed_protos)
-		rcdev->allowed_protos = pdata->allowed_protos;
+		rcdev->allowed_protocols = pdata->allowed_protos;
 	else
-		rcdev->allowed_protos = RC_BIT_ALL;
+		rcdev->allowed_protocols = RC_BIT_ALL;
 	rcdev->map_name = pdata->map_name ?: RC_MAP_EMPTY;
 
 	gpio_dev->rcdev = rcdev;
@@ -183,7 +183,6 @@ static int gpio_ir_recv_probe(struct platform_device *pdev)
 	return 0;
 
 err_request_irq:
-	platform_set_drvdata(pdev, NULL);
 	rc_unregister_device(rcdev);
 	rcdev = NULL;
 err_register_rc_device:
@@ -201,7 +200,6 @@ static int gpio_ir_recv_remove(struct platform_device *pdev)
 	struct gpio_rc_dev *gpio_dev = platform_get_drvdata(pdev);
 
 	free_irq(gpio_to_irq(gpio_dev->gpio_nr), gpio_dev);
-	platform_set_drvdata(pdev, NULL);
 	rc_unregister_device(gpio_dev->rcdev);
 	gpio_free(gpio_dev->gpio_nr);
 	kfree(gpio_dev);
@@ -246,7 +244,6 @@ static struct platform_driver gpio_ir_recv_driver = {
 	.remove = gpio_ir_recv_remove,
 	.driver = {
 		.name   = GPIO_IR_DRIVER_NAME,
-		.owner  = THIS_MODULE,
 		.of_match_table = of_match_ptr(gpio_ir_recv_of_match),
 #ifdef CONFIG_PM
 		.pm	= &gpio_ir_recv_pm_ops,

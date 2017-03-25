@@ -22,9 +22,10 @@
 #include <media/v4l2-of.h>
 
 static int v4l2_of_parse_csi_bus(const struct device_node *node,
-				 struct v4l2_of_endpoint *endpoint)
+				  struct v4l2_of_endpoint *endpoint)
 {
 	struct v4l2_of_bus_mipi_csi2 *bus = &endpoint->bus.mipi_csi2;
+//	u32 data_lanes[ARRAY_SIZE(bus->data_lanes)];
 	struct property *prop;
 	bool have_clk_lane = false;
 	unsigned int flags = 0;
@@ -42,6 +43,9 @@ static int v4l2_of_parse_csi_bus(const struct device_node *node,
 			bus->data_lanes[i] = v;
 		}
 		bus->num_data_lanes = i;
+//		while (i--)
+//			bus->data_lanes[i] = data_lanes[i];
+
 	}
 
 	prop = of_find_property(node, "lane-polarities", NULL);
@@ -75,7 +79,7 @@ static int v4l2_of_parse_csi_bus(const struct device_node *node,
 
 	bus->flags = flags;
 	endpoint->bus_type = V4L2_MBUS_CSI2;
-
+	
 	return 0;
 }
 
@@ -94,6 +98,10 @@ static void v4l2_of_parse_parallel_bus(const struct device_node *node,
 		flags |= v ? V4L2_MBUS_VSYNC_ACTIVE_HIGH :
 			V4L2_MBUS_VSYNC_ACTIVE_LOW;
 
+	if (!of_property_read_u32(node, "pclk-sample", &v))
+		flags |= v ? V4L2_MBUS_PCLK_SAMPLE_RISING :
+			V4L2_MBUS_PCLK_SAMPLE_FALLING;
+
 	if (!of_property_read_u32(node, "field-even-active", &v))
 		flags |= v ? V4L2_MBUS_FIELD_EVEN_HIGH :
 			V4L2_MBUS_FIELD_EVEN_LOW;
@@ -101,10 +109,6 @@ static void v4l2_of_parse_parallel_bus(const struct device_node *node,
 		endpoint->bus_type = V4L2_MBUS_PARALLEL;
 	else
 		endpoint->bus_type = V4L2_MBUS_BT656;
-
-	if (!of_property_read_u32(node, "pclk-sample", &v))
-		flags |= v ? V4L2_MBUS_PCLK_SAMPLE_RISING :
-			V4L2_MBUS_PCLK_SAMPLE_FALLING;
 
 	if (!of_property_read_u32(node, "data-active", &v))
 		flags |= v ? V4L2_MBUS_DATA_ACTIVE_HIGH :
@@ -153,15 +157,18 @@ int v4l2_of_parse_endpoint(const struct device_node *node,
 			   struct v4l2_of_endpoint *endpoint)
 {
 	int rval;
-
 	of_graph_parse_endpoint(node, &endpoint->base);
+/*	endpoint->bus_type = 0;
+	memset(&endpoint->bus, 0, sizeof(endpoint->bus));
+*/
 	/* Zero fields from bus_type to until the end */
 	memset(&endpoint->bus_type, 0, sizeof(*endpoint) -
 	       offsetof(typeof(*endpoint), bus_type));
-
+ 
 	rval = v4l2_of_parse_csi_bus(node, endpoint);
 	if (rval)
 		return rval;
+//	v4l2_of_parse_csi_bus(node, endpoint);
 	/*
 	 * Parse the parallel video bus properties only if none
 	 * of the MIPI CSI-2 specific properties were found.
@@ -173,6 +180,11 @@ int v4l2_of_parse_endpoint(const struct device_node *node,
 }
 EXPORT_SYMBOL(v4l2_of_parse_endpoint);
 
+
+
+
+
+
 /*
  * v4l2_of_free_endpoint() - free the endpoint acquired by
  * v4l2_of_alloc_parse_endpoint()
@@ -182,7 +194,7 @@ EXPORT_SYMBOL(v4l2_of_parse_endpoint);
  * endpoint the parsing of which failed.
  */
 void v4l2_of_free_endpoint(struct v4l2_of_endpoint *endpoint)
-{
+ {
 	if (!endpoint)
 		return;
 
@@ -235,7 +247,7 @@ struct v4l2_of_endpoint *v4l2_of_alloc_parse_endpoint(
 		if (!endpoint->link_frequencies) {
 			rval = -ENOMEM;
 			goto out_err;
-		}
+ 		}
 
 		endpoint->nr_of_link_frequencies =
 			len / sizeof(*endpoint->link_frequencies);
@@ -245,17 +257,17 @@ struct v4l2_of_endpoint *v4l2_of_alloc_parse_endpoint(
 			endpoint->nr_of_link_frequencies);
 		if (rval < 0)
 			goto out_err;
-	}
-
-	return endpoint;
+ 	}
+ 
+ 	return endpoint;
 
 out_err:
 	v4l2_of_free_endpoint(endpoint);
 	return rval;
-}
+ }
 EXPORT_SYMBOL(v4l2_of_alloc_parse_endpoint);
-
-/**
+ 
+ /**
  * v4l2_of_parse_link() - parse a link between two endpoints
  * @node: pointer to the endpoint at the local end of the link
  * @link: pointer to the V4L2 OF link data structure
@@ -270,26 +282,29 @@ EXPORT_SYMBOL(v4l2_of_alloc_parse_endpoint);
  * v4l2_of_put_link() to drop the references when done with the link.
  *
  * Return: 0 on success, or -ENOLINK if the remote endpoint can't be found.
- */
+  */
+
+
 int v4l2_of_parse_link(const struct device_node *node,
 		       struct v4l2_of_link *link)
-{
-	struct device_node *np;
-
+ {
+ 	struct device_node *np;
+	
 	memset(link, 0, sizeof(*link));
 
 	np = of_get_parent(node);
 	of_property_read_u32(np, "reg", &link->local_port);
 	np = of_get_next_parent(np);
 	if (of_node_cmp(np->name, "ports") == 0)
-		np = of_get_next_parent(np);
+ 		np = of_get_next_parent(np);
+
 	link->local_node = np;
 
 	np = of_parse_phandle(node, "remote-endpoint", 0);
 	if (!np) {
 		of_node_put(link->local_node);
 		return -ENOLINK;
-	}
+ 	}
 
 	np = of_get_parent(np);
 	of_property_read_u32(np, "reg", &link->remote_port);
@@ -299,19 +314,20 @@ int v4l2_of_parse_link(const struct device_node *node,
 	link->remote_node = np;
 
 	return 0;
-}
-EXPORT_SYMBOL(v4l2_of_parse_link);
+ }
 
-/**
+EXPORT_SYMBOL(v4l2_of_parse_link);
+ 
+ /**
  * v4l2_of_put_link() - drop references to nodes in a link
  * @link: pointer to the V4L2 OF link data structure
  *
  * Drop references to the local and remote nodes in the link. This function must
  * be called on every link parsed with v4l2_of_parse_link().
- */
+  */
 void v4l2_of_put_link(struct v4l2_of_link *link)
-{
+ {
 	of_node_put(link->local_node);
 	of_node_put(link->remote_node);
-}
+ }
 EXPORT_SYMBOL(v4l2_of_put_link);

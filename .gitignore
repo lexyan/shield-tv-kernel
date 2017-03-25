@@ -8,3 +8,10 @@
 
 # compilation output
 /out/
+
+# original .gitignore from kernel repo
+.gitignore.disable
+
+*.pdf
+*.scr
+

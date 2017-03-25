@@ -1,5 +1,17 @@
 /*
  */
+enum tveeprom_audio_processor {
+	/* No audio processor present */
+	TVEEPROM_AUDPROC_NONE,
+	/* The audio processor is internal to the video processor */
+	TVEEPROM_AUDPROC_INTERNAL,
+	/* The audio processor is a MSPXXXX device */
+	TVEEPROM_AUDPROC_MSP,
+	/* The audio processor is another device */
+	TVEEPROM_AUDPROC_OTHER,
+};
+
+#include <linux/if_ether.h>
 
 struct tveeprom {
 	u32 has_radio;
@@ -29,7 +41,7 @@ struct tveeprom {
 	u32 revision;
 	u32 serial_number;
 	char rev_str[5];
-	u8 MAC_address[6];
+	u8 MAC_address[ETH_ALEN];
 };
 
 void tveeprom_hauppauge_analog(struct i2c_client *c, struct tveeprom *tvee,
