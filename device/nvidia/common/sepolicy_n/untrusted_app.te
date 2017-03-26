@@ -42,3 +42,8 @@ allow untrusted_app asec_public_file:file r_file_perms;
 
 # Dont allow untrusted apps to access MAC address
 dontauditxperm untrusted_app self:udp_socket ioctl SIOCGIFHWADDR;
+
+allow untrusted_app dvb_device:dir { read open search getattr };
+allow untrusted_app device:dir read;
+
+allow untrusted_app dvb_device:chr_file { read write open };

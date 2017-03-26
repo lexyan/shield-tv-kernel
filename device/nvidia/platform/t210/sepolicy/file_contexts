@@ -28,3 +28,6 @@
 #for fs_mgr modified metadata
 /dev/block/platform/sdhci-tegra\.3/by-name/MDA u:object_r:metadata_block_device:s0
 /dev/block/platform/tegra-sata\.0/by-name/MDA u:object_r:metadata_block_device:s0
+
+# DVB API device nodes
+/dev/dvb.*                  u:object_r:dvb_device:s0

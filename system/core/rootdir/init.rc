@@ -228,11 +228,6 @@ on init
     # expecting it to point to /proc/self/fd
     symlink /proc/self/fd /dev/fd
 
-    # make dvb directory for dvb sticks
-    mkdir /dev/dvb 0770 root system
-    chmod 0770 /dev/dvb
-    chown root system /dev/dvb
-
 # Healthd can trigger a full boot from charger mode by signaling this
 # property when the power button is held.
 on property:sys.boot_from_charger_mode=1
@@ -322,6 +317,38 @@ on post-fs
     # create the lost+found directories, so as to enforce our permissions
     mkdir /cache/lost+found 0770 root root
 
+	
+    # make dvb directory for dvb sticks
+    mkdir /dev/dvb 0777 system system
+    chmod 0777 /dev/dvb
+    chown system system /dev/dvb
+
+    # create symlink for first adapter
+    mkdir /dev/dvb/adapter0 0777 root system
+	symlink /dev/dvb0.frontend0 /dev/dvb/adapter0/frontend0
+    symlink /dev/dvb0.demux0 /dev/dvb/adapter0/demux0
+    symlink /dev/dvb0.dvr0 /dev/dvb/adapter0/dvr0
+    symlink /dev/dvb0.dvr0 /dev/dvb/adapter0/dvr0.ts
+    symlink /dev/dvb0.net0 /dev/dvb/adapter0/net0
+    chmod 0777 /dev/dvb*
+    chmod 0777 /dev/dvb/adapter0
+    chmod 0777 /dev/dvb/adapter0/frontend0
+    chmod 0777 /dev/dvb/adapter0/demux0
+    chmod 0777 /dev/dvb/adapter0/dvr0
+    chmod 0777 /dev/dvb/adapter0/dvr0.ts
+    chmod 0777 /dev/dvb/adapter0/net0
+    chown system system /dev/dvb0.frontend0
+    chown system system /dev/dvb0.demux0
+    chown system system /dev/dvb0.dvr0
+    chown system system /dev/dvb0.net0
+    chown system system /dev/dvb/adapter0
+    chown system system /dev/dvb/adapter0/frontend0
+    chown system system /dev/dvb/adapter0/demux0
+    chown system system /dev/dvb/adapter0/dvr0
+    chown system system /dev/dvb/adapter0/dvr0.ts
+    chown system system /dev/dvb/adapter0/net0
+	
+	
 on post-fs-data
     # We chown/chmod /data again so because mount is run as root + defaults
     chown system system /data
@@ -453,7 +480,7 @@ on post-fs-data
 
     # Reload policy from /data/security if present.
     setprop selinux.reload_policy 1
-
+	
     # Set SELinux security contexts on upgrade or policy update.
     restorecon_recursive /data
 
