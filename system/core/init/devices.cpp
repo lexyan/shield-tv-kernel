@@ -725,6 +725,9 @@ static void handle_generic_device_event(struct uevent *uevent)
      } else if(!strncmp(uevent->subsystem, "sound", 5)) {
          base = "/dev/snd/";
          make_dir(base, 0755);
+     } else if(!strncmp(uevent->subsystem, "dvb", 5)) {
+         base = "/dev/dvb/";
+         make_dir(base, 0755);
      } else if(!strncmp(uevent->subsystem, "misc", 4) &&
                  !strncmp(name, "log_", 4)) {
          INFO("kernel logger is deprecated\n");
