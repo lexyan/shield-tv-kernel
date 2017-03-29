@@ -316,15 +316,6 @@ on post-fs
 
     # create the lost+found directories, so as to enforce our permissions
     mkdir /cache/lost+found 0770 root root
-
-    # create symlink for first adapter
-	mkdir /dev/dvb 0777 root system
-    mkdir /dev/dvb/adapter0 0777 root system
-	symlink /dev/dvb/dvb0.frontend0 /dev/dvb/adapter0/frontend0
-    symlink /dev/dvb/dvb0.demux0 /dev/dvb/adapter0/demux0
-    symlink /dev/dvb/dvb0.dvr0 /dev/dvb/adapter0/dvr0
-    symlink /dev/dvb/dvb0.dvr0 /dev/dvb/adapter0/dvr0.ts
-    symlink /dev/dvb/dvb0.net0 /dev/dvb/adapter0/net0
 	
 on post-fs-data
     # We chown/chmod /data again so because mount is run as root + defaults
