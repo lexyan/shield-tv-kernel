@@ -730,11 +730,10 @@ static void handle_generic_device_event(struct uevent *uevent)
 			if (!assemble_devpath(devpath, "/dev", uevent->device_name))
 				return;
 			mkdir_recursive_for_devpath(devpath);
-		}
-        /* 
-		base = "/dev/dvb/";
-        make_dir(base, 0755);
-		 */
+        } else {
+            base = "/dev/dvb/";
+            make_dir(base, 0755);
+        }
      } else if(!strncmp(uevent->subsystem, "misc", 4) &&
                  !strncmp(name, "log_", 4)) {
          INFO("kernel logger is deprecated\n");
