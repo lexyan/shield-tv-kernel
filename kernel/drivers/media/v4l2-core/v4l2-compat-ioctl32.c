@@ -8,6 +8,7 @@
  * Copyright (C) 2003       Pavel Machek (pavel@ucw.cz)
  * Copyright (C) 2005       Philippe De Muyter (phdm@macqel.be)
  * Copyright (C) 2008       Hans Verkuil <hverkuil@xs4all.nl>
+ * Copyright (c) 2016 NVIDIA CORPORATION.  All Rights Reserved.
  *
  * These routines maintain argument size conversion between 32bit and 64bit
  * ioctls.

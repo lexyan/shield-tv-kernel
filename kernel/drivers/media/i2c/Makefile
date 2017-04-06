@@ -5,6 +5,7 @@ obj-$(CONFIG_VIDEO_SMIAPP)	+= smiapp/
 obj-$(CONFIG_VIDEO_CX25840) += cx25840/
 obj-$(CONFIG_VIDEO_M5MOLS)	+= m5mols/
 obj-y				+= soc_camera/
+ccflags-y	+= -Idrivers/video/tegra/camera
 
 obj-$(CONFIG_VIDEO_APTINA_PLL) += aptina-pll.o
 obj-$(CONFIG_VIDEO_TVAUDIO) += tvaudio.o
@@ -54,9 +55,20 @@ obj-$(CONFIG_VIDEO_VP27SMPX) += vp27smpx.o
 obj-$(CONFIG_VIDEO_SONY_BTF_MPX) += sony-btf-mpx.o
 obj-$(CONFIG_VIDEO_UPD64031A) += upd64031a.o
 obj-$(CONFIG_VIDEO_UPD64083) += upd64083.o
+obj-$(CONFIG_VIDEO_IMX214) += imx2xx.o
+obj-$(CONFIG_VIDEO_IMX230) += imx2xx.o
+obj-$(CONFIG_VIDEO_I2C_OV5693) += ov5693.o
 obj-$(CONFIG_VIDEO_OV7640) += ov7640.o
 obj-$(CONFIG_VIDEO_OV7670) += ov7670.o
 obj-$(CONFIG_VIDEO_OV9650) += ov9650.o
+obj-$(CONFIG_VIDEO_IMX219) += imx219.o
+obj-$(CONFIG_VIDEO_IMX274) += imx274.o
+obj-$(CONFIG_VIDEO_IMX185) += imx185.o
+obj-$(CONFIG_I2C_IOEXPANDER_PCA9570) += pca9570.o
+obj-$(CONFIG_VIDEO_OV23850) += ov23850.o
+obj-$(CONFIG_VIDEO_OV13860) += ov13860.o
+obj-$(CONFIG_VIDEO_LC898212) += lc898212.o
+obj-$(CONFIG_VIDEO_TC358840)	+= tc358840.o
 obj-$(CONFIG_VIDEO_MT9M032) += mt9m032.o
 obj-$(CONFIG_VIDEO_MT9P031) += mt9p031.o
 obj-$(CONFIG_VIDEO_MT9T001) += mt9t001.o
@@ -79,3 +91,7 @@ obj-$(CONFIG_VIDEO_IR_I2C)  += ir-kbd-i2c.o
 obj-$(CONFIG_VIDEO_ML86V7667)	+= ml86v7667.o
 obj-$(CONFIG_VIDEO_OV2659)	+= ov2659.o
 obj-$(CONFIG_VIDEO_TC358743)	+= tc358743.o
+
+ifneq (,$(filter $(CONFIG_VIDEO_I2C_OV5693),y m))
+	ccflags-y += -I$(srctree)/drivers/media/platform/tegra
+endif

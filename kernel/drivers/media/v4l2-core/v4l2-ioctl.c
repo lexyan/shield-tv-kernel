@@ -621,6 +621,7 @@ static void v4l_print_jpegcompression(const void *arg, bool write_only)
 		"COM_len=%d, jpeg_markers=0x%x\n",
 		p->quality, p->APPn, p->APP_len,
 		p->COM_len, p->jpeg_markers);
+		p->COM_len, p->jpeg_markers);
 }
 
 static void v4l_print_enc_idx(const void *arg, bool write_only)
@@ -1352,6 +1353,8 @@ static int v4l_g_fmt(const struct v4l2_ioctl_ops *ops,
 	bool is_tx = vfd->vfl_dir != VFL_DIR_RX;
 	int ret;
 
+	p->fmt.pix.priv = V4L2_PIX_FMT_PRIV_MAGIC;
+	
 	/*
 	 * fmt can't be cleared for these overlay types due to the 'clips'
 	 * 'clipcount' and 'bitmap' pointers in struct v4l2_window.

@@ -1,6 +1,7 @@
 #
 # Makefile for the video capture/playback device drivers.
 #
+GCOV_PROFILE := y
 
 obj-$(CONFIG_VIDEO_TIMBERDALE)	+= timblogiw.o
 obj-$(CONFIG_VIDEO_M32R_AR_M64278) += arv.o
@@ -50,8 +51,11 @@ obj-$(CONFIG_VIDEO_RENESAS_VSP1)	+= vsp1/
 
 obj-y	+= omap/
 
+obj-$(CONFIG_PLATFORM_TEGRA) += tegra/
+
 obj-$(CONFIG_VIDEO_AM437X_VPFE)		+= am437x/
 
 obj-$(CONFIG_VIDEO_XILINX)		+= xilinx/
 
 ccflags-y += -I$(srctree)/drivers/media/i2c
+ccflags-y += -I$(srctree)/drivers/video/tegra/host
