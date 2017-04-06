@@ -52,17 +52,14 @@ static int gpio_ir_recv_get_devtree_pdata(struct device *dev,
 
 	pdata->gpio_nr = gpio;
 	pdata->active_low = (flags & OF_GPIO_ACTIVE_LOW);
-	if (of_property_read_u32(np, "min-delay", &pdata->min_delay))
-		pdata->min_delay = 0;	
 	/* probe() takes care of map_name == NULL or allowed_protos == 0 */
 	pdata->map_name = of_get_property(np, "linux,rc-map-name", NULL);
-//	pdata->allowed_protos = 0;
-	if (of_property_read_u64(np, "allowed-protos", &pdata->allowed_protos))
-		pdata->allowed_protos = 0;
+	pdata->allowed_protos = 0;
+
 	return 0;
 }
 
-static struct of_device_id gpio_ir_recv_of_match[] = {
+static const struct of_device_id gpio_ir_recv_of_match[] = {
 	{ .compatible = "gpio-ir-receiver", },
 	{ },
 };
@@ -81,7 +78,7 @@ static irqreturn_t gpio_ir_recv_irq(int irq, void *dev_id)
 	int rc = 0;
 	enum raw_event_type type = IR_SPACE;
 
-	gval = gpio_get_value_cansleep(gpio_dev->gpio_nr);
+	gval = gpio_get_value(gpio_dev->gpio_nr);
 
 	if (gval < 0)
 		goto err_get_value;
@@ -147,7 +144,6 @@ static int gpio_ir_recv_probe(struct platform_device *pdev)
 	rcdev->input_id.version = 0x0100;
 	rcdev->dev.parent = &pdev->dev;
 	rcdev->driver_name = GPIO_IR_DRIVER_NAME;
-	rcdev->min_delay = pdata->min_delay;
 	if (pdata->allowed_protos)
 		rcdev->allowed_protocols = pdata->allowed_protos;
 	else

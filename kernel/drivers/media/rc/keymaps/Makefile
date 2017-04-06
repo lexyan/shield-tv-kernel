@@ -65,8 +65,6 @@ obj-$(CONFIG_RC_MAP) += rc-adstech-dvb-t-pci.o \
 			rc-nec-terratec-cinergy-xs.o \
 			rc-norwood.o \
 			rc-npgtech.o \
-			rc-nvidia.o \
-			rc-nvidia-nec.o \
 			rc-pctv-sedna.o \
 			rc-pinnacle-color.o \
 			rc-pinnacle-grey.o \
@@ -86,7 +84,10 @@ obj-$(CONFIG_RC_MAP) += rc-adstech-dvb-t-pci.o \
 			rc-snapstream-firefly.o \
 			rc-streamzap.o \
 			rc-tbs-nec.o \
+			rc-technisat-ts35.o \
 			rc-technisat-usb2.o \
+			rc-terratec-cinergy-c-pci.o \
+			rc-terratec-cinergy-s2-hd.o \
 			rc-terratec-cinergy-xs.o \
 			rc-terratec-slim.o \
 			rc-terratec-slim-2.o \
@@ -96,6 +97,7 @@ obj-$(CONFIG_RC_MAP) += rc-adstech-dvb-t-pci.o \
 			rc-total-media-in-hand-02.o \
 			rc-trekstor.o \
 			rc-tt-1500.o \
+			rc-twinhan-dtv-cab-ci.o \
 			rc-twinhan1027.o \
 			rc-videomate-m1f.o \
 			rc-videomate-s350.o \

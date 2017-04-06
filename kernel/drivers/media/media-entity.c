@@ -122,7 +122,6 @@ static struct media_entity *stack_pop(struct media_entity_graph *graph)
 	return entity;
 }
 
-#define stack_peek(en)	((en)->stack[(en)->top - 1].entity)														  
 #define link_top(en)	((en)->stack[(en)->top].link)
 #define stack_top(en)	((en)->stack[(en)->top].entity)
 
@@ -236,8 +235,8 @@ __must_check int media_entity_pipeline_start(struct media_entity *entity,
 	media_entity_graph_walk_start(&graph, entity);
 
 	while ((entity = media_entity_graph_walk_next(&graph))) {
-		DECLARE_BITMAP(active, entity->num_pads);
-		DECLARE_BITMAP(has_no_links, entity->num_pads);
+		DECLARE_BITMAP(active, MEDIA_ENTITY_MAX_PADS);
+		DECLARE_BITMAP(has_no_links, MEDIA_ENTITY_MAX_PADS);
 		unsigned int i;
 
 		entity->stream_count++;
@@ -283,9 +282,9 @@ __must_check int media_entity_pipeline_start(struct media_entity *entity,
 			if (ret < 0 && ret != -ENOIOCTLCMD) {
 				dev_dbg(entity->parent->dev,
 					"link validation failed for \"%s\":%u -> \"%s\":%u, error %d\n",
-					entity->name, link->source->index,
-					link->sink->entity->name,
-					link->sink->index, ret);
+					link->source->entity->name,
+					link->source->index,
+					entity->name, link->sink->index, ret);
 				goto error;
 			}
 		}
@@ -679,36 +678,3 @@ struct media_pad *media_entity_remote_pad(struct media_pad *pad)
 
 }
 EXPORT_SYMBOL_GPL(media_entity_remote_pad);
-
-/**
- * media_entity_remote_source - Find the source pad at the remote end of a link
- * @pad: Sink pad at the local end of the link
- *
- * Search for a remote source pad connected to the given sink pad by iterating
- * over all links originating or terminating at that pad until an enabled link
- * is found.
- *
- * Return a pointer to the pad at the remote end of the first found enabled
- * link, or NULL if no enabled link has been found.
- */
-struct media_pad *media_entity_remote_source(struct media_pad *pad)
-{
-	unsigned int i;
-
-	for (i = 0; i < pad->entity->num_links; i++) {
-		struct media_link *link = &pad->entity->links[i];
-
-		if (!(link->flags & MEDIA_LNK_FL_ENABLED))
-			continue;
-
-		if (link->source == pad)
-			return link->sink;
-
-		if (link->sink == pad)
-			return link->source;
-	}
-
-	return NULL;
-
-}
-EXPORT_SYMBOL_GPL(media_entity_remote_source);

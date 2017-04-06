@@ -22,7 +22,7 @@ config VIDEO_IR_I2C
 #
 
 menu "Encoders, decoders, sensors and other helper chips"
-	visible if !MEDIA_SUBDRV_AUTOSELECT
+	visible if !MEDIA_SUBDRV_AUTOSELECT || COMPILE_TEST
 
 comment "Audio decoders, processors and mixers"
 
@@ -177,7 +177,7 @@ comment "Video decoders"
 
 config VIDEO_ADV7180
 	tristate "Analog Devices ADV7180 decoder"
-	depends on VIDEO_V4L2 && I2C
+	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
 	---help---
 	  Support for the Analog Devices ADV7180 video decoder.
 
@@ -196,7 +196,9 @@ config VIDEO_ADV7183
 
 config VIDEO_ADV7604
 	tristate "Analog Devices ADV7604 decoder"
-	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
+	depends on GPIOLIB || COMPILE_TEST
+	select HDMI
 	---help---
 	  Support for the Analog Devices ADV7604 video decoder.
 
@@ -208,7 +210,8 @@ config VIDEO_ADV7604
 
 config VIDEO_ADV7842
 	tristate "Analog Devices ADV7842 decoder"
-	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
+	select HDMI
 	---help---
 	  Support for the Analog Devices ADV7842 video decoder.
 
@@ -283,6 +286,16 @@ config VIDEO_SAA711X
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called saa7115.
+
+config VIDEO_TC358743
+	tristate "Toshiba TC358743 decoder"
+	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
+	select HDMI
+	---help---
+	  Support for the Toshiba TC358743 HDMI to MIPI CSI-2 bridge.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called tc358743.
 
 config VIDEO_TVP514X
 	tristate "Texas Instruments TVP514x video decoder"
@@ -422,7 +435,8 @@ config VIDEO_ADV7393
 
 config VIDEO_ADV7511
 	tristate "Analog Devices ADV7511 encoder"
-	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
+	select HDMI
 	---help---
 	  Support for the Analog Devices ADV7511 video encoder.
 
@@ -465,44 +479,16 @@ config VIDEO_APTINA_PLL
 config VIDEO_SMIAPP_PLL
 	tristate
 
-
-config VIDEO_IMX214
-        tristate "IMX214 camera sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	  This driver supports IMX214 camera sensor from Sony
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called imx2xx.
-
-config VIDEO_IMX230
-        tristate "IMX230 camera sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	  This driver supports IMX230 camera sensor from Sony
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called imx2xx.
-
-config VIDEO_LC898212
-	tristate "LC898212 focuser support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	  This driver supports LC898212 camera focuser
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called lc898212.
-
-config VIDEO_I2C_OV5693
-        tristate "OV5693 camera sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+config VIDEO_OV2659
+	tristate "OmniVision OV2659 sensor support"
+	depends on VIDEO_V4L2 && I2C
+	depends on MEDIA_CAMERA_SUPPORT
 	---help---
 	  This is a Video4Linux2 sensor-level driver for the OmniVision
-	  OV5693 camera.
+	  OV2659 camera.
 
-	  To compile this driver as a module, choose M here: the module
-	  will be called imx214.
-
+	  To compile this driver as a module, choose M here: the
+	  module will be called ov2659.
 
 config VIDEO_OV7640
 	tristate "OmniVision OV7640 sensor support"
@@ -530,64 +516,6 @@ config VIDEO_OV9650
 	---help---
 	  This is a V4L2 sensor-level driver for the Omnivision
 	  OV9650 and OV9652 camera sensors.
-
-
-config VIDEO_OV23850
-        tristate "OmniVision OV23850 sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	  This driver supports OmniVision OV23850 camera sensor
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called ov23850.
-
-config VIDEO_OV13860
-        tristate "OmniVision OV13860 sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	  This driver supports OmniVision OV13860 camera sensor
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called ov13860.
-
-config VIDEO_IMX219
-        tristate "IMX219 camera sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	  This driver supports IMX219 camera sensor from Sony
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called imx219.
-
-config VIDEO_IMX274
-	tristate "IMX274 camera sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	This is a Video4Linux2 sensor-level driver for the Sony
-	IMX274 camera sensor
-
-	To compile this driver as a module, choose M here: the module
-	will be called imx274.
-
-config VIDEO_IMX185
-	tristate "IMX185 camera sensor support"
-	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	---help---
-	This is a Video4Linux2 sensor-level driver for the Sony
-	IMX185 camera sensor
-
-	To compile this driver as a module, choose M here: the module
-	will be called imx185.
-
-config VIDEO_TC358840
-	tristate "Toshiba TC358840 decoder"
-	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
-	select HDMI
-	---help---
-	  Support for the Toshiba TC358840 HDMI to MIPI CSI-2 bridge.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called tc358840.
 
 config VIDEO_VS6624
 	tristate "ST VS6624 sensor support"
@@ -679,6 +607,7 @@ config VIDEO_S5K6A3
 config VIDEO_S5K4ECGX
         tristate "Samsung S5K4ECGX sensor support"
         depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select CRC32
         ---help---
           This is a V4L2 sensor-level driver for Samsung S5K4ECGX 5M
           camera sensor with an embedded SoC image signal processor.
@@ -792,16 +721,6 @@ config VIDEO_M52790
 
 	 To compile this driver as a module, choose M here: the
 	 module will be called m52790.
-
-config I2C_IOEXPANDER_PCA9570
-	tristate "nxp PCA9570 I2C IO Expander"
-	help
-	  If you say yes here you get support for the nxp PCA9570
-	  I2C IO Expander devices.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called pca9570.
-
 endmenu
 
 menu "Sensors used on soc_camera driver"
