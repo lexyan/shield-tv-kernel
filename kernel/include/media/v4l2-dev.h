@@ -134,7 +134,10 @@ struct video_device
 	spinlock_t		fh_lock; /* Lock for all v4l2_fhs */
 	struct list_head	fh_list; /* List of struct v4l2_fh */
 
-	int debug;			/* Activates debug level*/
+	union {
+		int debug;			/* Activates debug level*/
+		int dev_debug;
+	};
 
 	/* Video standard vars */
 	v4l2_std_id tvnorms;		/* Supported tv norms */

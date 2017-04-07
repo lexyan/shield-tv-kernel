@@ -33,6 +33,7 @@
 #include <media/videobuf2-dma-contig.h>
 #include <media/camera_common.h>
 #include <media/tegra_camera_platform.h>
+#include <media/media-entity.h>
 
 #include <mach/clk.h>
 #include <mach/io_dpd.h>
@@ -1393,7 +1394,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 
 	/* set_stream of CSI */
 	entity = &chan->video.entity;
-	pad = media_entity_remote_source(&chan->pad);
+	pad = media_entity_remote_pad(&chan->pad);
 	if (!pad)
 		return -ENODEV;
 
@@ -1418,7 +1419,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 		if (!(pad->flags & MEDIA_PAD_FL_SINK))
 			break;
 
-		pad = media_entity_remote_source(pad);
+		pad = media_entity_remote_pad(pad);
 		if (pad == NULL ||
 		    media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV)
 			break;

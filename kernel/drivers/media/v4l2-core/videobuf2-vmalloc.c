@@ -360,7 +360,8 @@ static struct dma_buf *vb2_vmalloc_get_dmabuf(void *buf_priv, unsigned long flag
 	if (WARN_ON(!buf->vaddr))
 		return NULL;
 
-	dbuf = dma_buf_export(&exp_info);
+//	dbuf = dma_buf_export(&exp_info);
+	dbuf = dma_buf_export(buf, &vb2_vmalloc_dmabuf_ops, buf->size, flags);
 	if (IS_ERR(dbuf))
 		return NULL;
 

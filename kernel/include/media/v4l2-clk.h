@@ -22,6 +22,7 @@
 struct module;
 struct device;
 
+struct clk;
 struct v4l2_clk {
 	struct list_head list;
 	const struct v4l2_clk_ops *ops;
@@ -30,6 +31,7 @@ struct v4l2_clk {
 	int enable;
 	struct mutex lock; /* Protect the enable count */
 	atomic_t use_count;
+	struct clk *clk;
 	void *priv;
 };
 
@@ -43,7 +45,7 @@ struct v4l2_clk_ops {
 
 struct v4l2_clk *v4l2_clk_register(const struct v4l2_clk_ops *ops,
 				   const char *dev_name,
-				   const char *name, void *priv);
+				   /*const char *name, */void *priv);
 void v4l2_clk_unregister(struct v4l2_clk *clk);
 struct v4l2_clk *v4l2_clk_get(struct device *dev, const char *id);
 void v4l2_clk_put(struct v4l2_clk *clk);
@@ -55,14 +57,14 @@ int v4l2_clk_set_rate(struct v4l2_clk *clk, unsigned long rate);
 struct module;
 
 struct v4l2_clk *__v4l2_clk_register_fixed(const char *dev_id,
-		const char *id, unsigned long rate, struct module *owner);
+		/*const char *id,*/ unsigned long rate, struct module *owner);
 void v4l2_clk_unregister_fixed(struct v4l2_clk *clk);
 
 static inline struct v4l2_clk *v4l2_clk_register_fixed(const char *dev_id,
 							const char *id,
 							unsigned long rate)
 {
-	return __v4l2_clk_register_fixed(dev_id, id, rate, THIS_MODULE);
+	return __v4l2_clk_register_fixed(dev_id,/* id, */ rate, THIS_MODULE);
 }
 
 #define v4l2_clk_name_i2c(name, size, adap, client) snprintf(name, size, \

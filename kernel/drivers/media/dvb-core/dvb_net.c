@@ -1241,7 +1241,7 @@ static int dvb_net_add_if(struct dvb_net *dvbnet, u16 pid, u8 feedtype)
 		return -EINVAL;
 
 	net = alloc_netdev(sizeof(struct dvb_net_priv), "dvb",
-			   NET_NAME_UNKNOWN, dvb_net_setup);
+			   /* NET_NAME_UNKNOWN, */dvb_net_setup);
 	if (!net)
 		return -ENOMEM;
 

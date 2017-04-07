@@ -252,6 +252,11 @@ static int dvb_usbv2_adapter_stream_exit(struct dvb_usb_adapter *adap)
 
 	return usb_urb_exitv2(&adap->stream);
 }
+static int wait_schedule(void *ptr)
+{
+        schedule();
+        return 0;
+}
 
 static int dvb_usb_start_feed(struct dvb_demux_feed *dvbdmxfeed)
 {
@@ -266,7 +271,7 @@ static int dvb_usb_start_feed(struct dvb_demux_feed *dvbdmxfeed)
 			dvbdmxfeed->pid, dvbdmxfeed->index);
 
 	/* wait init is done */
-	wait_on_bit(&adap->state_bits, ADAP_INIT, TASK_UNINTERRUPTIBLE);
+	wait_on_bit(&adap->state_bits, ADAP_INIT, wait_schedule, TASK_UNINTERRUPTIBLE);
 
 	if (adap->active_fe == -1)
 		return -EINVAL;
@@ -615,8 +620,8 @@ static int dvb_usb_fe_sleep(struct dvb_frontend *fe)
 
 	if (!adap->suspend_resume_active) {
 		set_bit(ADAP_SLEEP, &adap->state_bits);
-		wait_on_bit(&adap->state_bits, ADAP_STREAMING,
-				TASK_UNINTERRUPTIBLE);
+		wait_on_bit(&adap->state_bits, ADAP_STREAMING, 
+				wait_schedule, TASK_UNINTERRUPTIBLE);
 	}
 
 	if (adap->fe_sleep[fe->id]) {

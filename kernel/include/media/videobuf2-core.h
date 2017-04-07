@@ -18,6 +18,15 @@
 #include <linux/videodev2.h>
 #include <linux/dma-buf.h>
 
+#define VB2_MAX_FRAME	(32)
+#define VB2_MAX_PLANES	(8)
+
+enum vb2_memory {
+	VB2_MEMORY_UNKNOWN	= 0,
+	VB2_MEMORY_MMAP		= 1,
+	VB2_MEMORY_USERPTR	= 2,
+	VB2_MEMORY_DMABUF	= 4,
+};
 struct vb2_alloc_ctx;
 struct vb2_fileio_data;
 struct vb2_threadio_data;
@@ -36,6 +45,8 @@ struct vb2_threadio_data;
  *		no other users of this buffer are present); the buf_priv
  *		argument is the allocator private per-buffer structure
  *		previously returned from the alloc callback
+ * @get_dmabuf: acquire userspace memory for a hardware operation; used for
+ *		 DMABUF memory types.
  * @get_userptr: acquire userspace memory for a hardware operation; used for
  *		 USERPTR memory types; vaddr is the address passed to the
  *		 videobuf layer when queuing a video buffer of USERPTR type;
@@ -85,7 +96,7 @@ struct vb2_mem_ops {
 //	void		*(*alloc)(void *alloc_ctx, unsigned long size, gfp_t gfp_flags);
 	void		*(*alloc)(void *alloc_ctx, unsigned long size,
 				  enum dma_data_direction dma_dir,
-				  gfp_t gfp_flags);				   
+				  gfp_t gfp_flags);
 	void		(*put)(void *buf_priv);
 	struct dma_buf *(*get_dmabuf)(void *buf_priv, unsigned long flags);
 
@@ -93,7 +104,8 @@ struct vb2_mem_ops {
 					unsigned long size, int write); */
 	void		*(*get_userptr)(void *alloc_ctx, unsigned long vaddr,
 					unsigned long size,
-					enum dma_data_direction dma_dir);									  
+					enum dma_data_direction dma_dir);
+
 	void		(*put_userptr)(void *buf_priv);
 
 	void		(*prepare)(void *buf_priv);
@@ -116,10 +128,40 @@ struct vb2_mem_ops {
 	int		(*mmap)(void *buf_priv, struct vm_area_struct *vma);
 };
 
+/**
+ * struct vb2_plane - plane information
+ * @mem_priv:	private data with this plane
+ * @dbuf:	dma_buf - shared buffer object
+ * @dbuf_mapped:	flag to show whether dbuf is mapped or not
+ * @bytesused:	number of bytes occupied by data in the plane (payload)
+ * @length:	size of this plane (NOT the payload) in bytes
+ * @offset:	when memory in the associated struct vb2_buffer is
+ *		VB2_MEMORY_MMAP, equals the offset from the start of
+ *		the device memory for this plane (or is a "cookie" that
+ *		should be passed to mmap() called on the video node)
+ * @userptr:	when memory is VB2_MEMORY_USERPTR, a userspace pointer
+ *		pointing to this plane
+ * @fd:		when memory is VB2_MEMORY_DMABUF, a userspace file
+ *		descriptor associated with this plane
+ * @m:		Union with memtype-specific data (@offset, @userptr or
+ *		@fd).
+ * @data_offset:	offset in the plane to the start of data; usually 0,
+ *		unless there is a header in front of the data
+ * Should contain enough information to be able to cover all the fields
+ * of struct v4l2_plane at videodev2.h
+ */
 struct vb2_plane {
 	void			*mem_priv;
 	struct dma_buf		*dbuf;
 	unsigned int		dbuf_mapped;
+	unsigned int		bytesused;
+	unsigned int		length;
+	union {
+		unsigned int	offset;
+		unsigned long	userptr;
+		int		fd;
+	} m;
+	unsigned int		data_offset;
 };
 
 /**
@@ -155,6 +197,7 @@ enum vb2_fileio_flags {
  * @VB2_BUF_STATE_PREPARING:	buffer is being prepared in videobuf
  * @VB2_BUF_STATE_PREPARED:	buffer prepared in videobuf and by the driver
  * @VB2_BUF_STATE_QUEUED:	buffer queued in videobuf, but not in driver
+ * @VB2_BUF_STATE_REQUEUEING:	re-queue a buffer to the driver
  * @VB2_BUF_STATE_ACTIVE:	buffer queued in driver and possibly used
  *				in a hardware operation
  * @VB2_BUF_STATE_DONE:		buffer returned from driver to videobuf, but
@@ -168,6 +211,7 @@ enum vb2_buffer_state {
 	VB2_BUF_STATE_PREPARING,
 	VB2_BUF_STATE_PREPARED,
 	VB2_BUF_STATE_QUEUED,
+	VB2_BUF_STATE_REQUEUEING,
 	VB2_BUF_STATE_ACTIVE,
 	VB2_BUF_STATE_DONE,
 	VB2_BUF_STATE_ERROR,
@@ -189,6 +233,9 @@ struct vb2_queue;
  *			instead of v4l2_buf for filling bytesused - drivers
  *			should use the vb2_set_plane_payload() function for that
  * @vb2_queue:		the queue to which this driver belongs
+ * @index:		id number of the buffer
+ * @type:		buffer type
+ * @memory:		the method, in which the actual data is passed
  * @num_planes:		number of planes in the buffer
  *			on an internal driver queue
  * @state:		current buffer state; do not change
@@ -203,16 +250,24 @@ struct vb2_buffer {
 	struct v4l2_plane	v4l2_planes[VIDEO_MAX_PLANES];
 
 	struct vb2_queue	*vb2_queue;
-
+	unsigned int		index;
+	unsigned int		type;
+	unsigned int		memory;
 	unsigned int		num_planes;
+	struct vb2_plane	planes[VB2_MAX_PLANES];
 
-/* Private: internal use only */
+/* Private: internal use only
+ *
+ * state:		current buffer state; do not change
+ * queued_entry:	entry on the queued buffers list, which holds
+ *			all buffers queued from userspace
+ * done_entry:		entry on the list that stores all buffers ready
+ *			to be dequeued to userspace
+ */						 
 	enum vb2_buffer_state	state;
 
 	struct list_head	queued_entry;
 	struct list_head	done_entry;
-
-	struct vb2_plane	planes[VIDEO_MAX_PLANES];
 
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	/*
@@ -345,6 +400,13 @@ struct vb2_ops {
 };
 
 struct v4l2_fh;
+struct vb2_buf_ops {
+	int (*verify_planes_array)(struct vb2_buffer *vb, const void *pb);
+	int (*fill_user_buffer)(struct vb2_buffer *vb, void *pb);
+	int (*fill_vb2_buffer)(struct vb2_buffer *vb, const void *pb,
+				struct vb2_plane *planes);
+	int (*set_timestamp)(struct vb2_buffer *vb, const void *pb);
+};
 
 /**
  * struct vb2_queue - a videobuf queue
@@ -352,6 +414,9 @@ struct v4l2_fh;
  * @type:	queue type (see V4L2_BUF_TYPE_* in linux/videodev2.h
  * @io_modes:	supported io methods (see vb2_io_modes enum)
  * @io_flags:	additional io flags (see vb2_fileio_flags enum)
+ * @fileio_read_once:		report EOF after reading the first buffer
+ * @fileio_write_immediately:	queue buffer after each write() call
+ * @allow_zero_bytesused:	allow bytesused == 0 to be passed to the driver
  * @lock:	pointer to a mutex that protects the vb2_queue struct. The
  *		driver can set this to a mutex to let the v4l2 core serialize
  *		the queuing ioctls. If the driver wants to handle locking
@@ -363,6 +428,8 @@ struct v4l2_fh;
  *		drivers to easily associate an owner filehandle with the queue.
  * @ops:	driver-specific callbacks
  * @mem_ops:	memory allocator specific callbacks
+ * @buf_ops:	callbacks to deliver buffer information
+ *		between user-space and kernel-space
  * @drv_priv:	driver private data
  * @buf_struct_size: size of the driver-specific buffer structure;
  *		"0" indicates the driver doesn't want to use a custom buffer
@@ -396,6 +463,11 @@ struct v4l2_fh;
  *		buffers. Only set for capture queues if qbuf has not yet been
  *		called since poll() needs to return POLLERR in that situation.
  * @error:	a fatal error occurred on the queue
+ * @is_multiplanar: set if buffer type is multiplanar
+ * @is_output:	set if buffer type is output
+ * @last_buffer_dequeued: used in poll() and DQBUF to immediately return if the
+ *		last decoded buffer was already dequeued. Set for capture queues
+ *		when a buffer with the V4L2_BUF_FLAG_LAST is dequeued.
  * @fileio:	file io emulator internal data, used only if emulator is active
  * @threadio:	thread io internal data, used only if thread is active
  */
@@ -403,11 +475,15 @@ struct vb2_queue {
 	enum v4l2_buf_type		type;
 	unsigned int			io_modes;
 	unsigned int			io_flags;
+	unsigned			fileio_read_once:1;
+	unsigned			fileio_write_immediately:1;
+	unsigned			allow_zero_bytesused:1;
 	struct mutex			*lock;
 	struct v4l2_fh			*owner;
 
 	const struct vb2_ops		*ops;
 	const struct vb2_mem_ops	*mem_ops;
+	const struct vb2_buf_ops	*buf_ops;
 	void				*drv_priv;
 	unsigned int			buf_struct_size;
 	union {
@@ -439,6 +515,8 @@ struct vb2_queue {
 	unsigned int                    start_streaming_called:1;
 	unsigned int                    error:1;
 	unsigned int                    waiting_for_buffers:1;
+	unsigned int			is_multiplanar:1;
+	unsigned int			is_output:1;
 	unsigned int                    last_buffer_dequeued:1;
 
 	struct vb2_fileio_data		*fileio;
@@ -464,12 +542,24 @@ void vb2_buffer_done(struct vb2_buffer *vb, enum vb2_buffer_state state);
 void vb2_discard_done(struct vb2_queue *q);
 int vb2_wait_for_all_buffers(struct vb2_queue *q);
 
+int vb2_core_querybuf(struct vb2_queue *q, unsigned int index, void *pb);
+int vb2_core_reqbufs(struct vb2_queue *q, enum vb2_memory memory,
+		unsigned int *count);
+int vb2_core_create_bufs(struct vb2_queue *q, enum vb2_memory memory,
+		unsigned int *count, const void *parg);
+int vb2_core_prepare_buf(struct vb2_queue *q, unsigned int index, void *pb);
+int vb2_core_qbuf(struct vb2_queue *q, unsigned int index, void *pb);
+int vb2_core_dqbuf(struct vb2_queue *q, void *pb, bool nonblocking);
+int vb2_core_streamon(struct vb2_queue *q, unsigned int type);
+int vb2_core_streamoff(struct vb2_queue *q, unsigned int type);
 int vb2_querybuf(struct vb2_queue *q, struct v4l2_buffer *b);
 int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req);
-
+int vb2_core_expbuf(struct vb2_queue *q, int *fd, unsigned int type,
+		unsigned int index, unsigned int plane, unsigned int flags);
 int vb2_create_bufs(struct vb2_queue *q, struct v4l2_create_buffers *create);
 int vb2_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b);
-
+int vb2_core_queue_init(struct vb2_queue *q);
+void vb2_core_queue_release(struct vb2_queue *q);									 
 int __must_check vb2_queue_init(struct vb2_queue *q);
 
 void vb2_queue_release(struct vb2_queue *q);

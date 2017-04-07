@@ -507,6 +507,9 @@ config PGTABLE_MAPPING
 config GENERIC_EARLY_IOREMAP
 	bool
 
+config FRAME_VECTOR
+	bool
+
 if STAGING
 config HMM
 	bool "Enable heterogeneous memory management (HMM)"

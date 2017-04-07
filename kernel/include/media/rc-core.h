@@ -130,7 +130,10 @@ struct rc_dev {
 	const char			*map_name;
 	struct rc_map			rc_map;
 	struct mutex			lock;
-	unsigned long			devno;
+	union {
+		unsigned long			devno;
+		unsigned long			minor;
+	};
 	struct ir_raw_event_ctrl	*raw;
 	struct input_dev		*input_dev;
 	enum rc_driver_type		driver_type;

@@ -42,7 +42,9 @@ struct v4l2_ioctl_ops {
 					      struct v4l2_fmtdesc *f);
 	int (*vidioc_enum_fmt_sdr_cap)     (struct file *file, void *fh,
 					    struct v4l2_fmtdesc *f);
- 
+ 	int (*vidioc_enum_fmt_sdr_out)     (struct file *file, void *fh,
+					    struct v4l2_fmtdesc *f);
+
 	/* VIDIOC_G_FMT handlers */
 	int (*vidioc_g_fmt_vid_cap)    (struct file *file, void *fh,
 					struct v4l2_format *f);
@@ -66,7 +68,8 @@ struct v4l2_ioctl_ops {
 					   struct v4l2_format *f);
 	int (*vidioc_g_fmt_sdr_cap)    (struct file *file, void *fh,
 					struct v4l2_format *f);
- 
+	int (*vidioc_g_fmt_sdr_out)    (struct file *file, void *fh,
+					struct v4l2_format *f);
 	/* VIDIOC_S_FMT handlers */
 	int (*vidioc_s_fmt_vid_cap)    (struct file *file, void *fh,
 					struct v4l2_format *f);
@@ -90,7 +93,8 @@ struct v4l2_ioctl_ops {
 					   struct v4l2_format *f);
 	int (*vidioc_s_fmt_sdr_cap)    (struct file *file, void *fh,
 					struct v4l2_format *f);
- 
+	int (*vidioc_s_fmt_sdr_out)    (struct file *file, void *fh,
+					struct v4l2_format *f);
 	/* VIDIOC_TRY_FMT handlers */
 	int (*vidioc_try_fmt_vid_cap)    (struct file *file, void *fh,
 					  struct v4l2_format *f);
@@ -114,7 +118,8 @@ struct v4l2_ioctl_ops {
 					     struct v4l2_format *f);
 	int (*vidioc_try_fmt_sdr_cap)    (struct file *file, void *fh,
 					  struct v4l2_format *f);
- 
+	int (*vidioc_try_fmt_sdr_out)    (struct file *file, void *fh,
+					  struct v4l2_format *f);
 	/* Buffer handlers */
 	int (*vidioc_reqbufs) (struct file *file, void *fh, struct v4l2_requestbuffers *b);
 	int (*vidioc_querybuf)(struct file *file, void *fh, struct v4l2_buffer *b);
@@ -295,9 +300,19 @@ struct v4l2_ioctl_ops {
 /* v4l debugging and diagnostics */
 
 /* Debug bitmask flags to be used on V4L2 */
-#define V4L2_DEBUG_IOCTL     0x01
-#define V4L2_DEBUG_IOCTL_ARG 0x02
 
+/* Just log the ioctl name + error code */
+#define V4L2_DEBUG_IOCTL     0x01
+#define V4L2_DEV_DEBUG_IOCTL		0x01
+/* Log the ioctl name arguments + error code */
+#define V4L2_DEBUG_IOCTL_ARG 0x02
+#define V4L2_DEV_DEBUG_IOCTL_ARG	0x02
+/* Log the file operations open, release, mmap and get_unmapped_area */
+#define V4L2_DEV_DEBUG_FOP		0x04
+/* Log the read and write file operations and the VIDIOC_(D)QBUF ioctls */
+#define V4L2_DEV_DEBUG_STREAMING	0x08
+/* Log poll() */
+#define V4L2_DEV_DEBUG_POLL		0x10
 /*  Video standard functions  */
 extern const char *v4l2_norm_to_name(v4l2_std_id id);
 extern void v4l2_video_std_frame_period(int id, struct v4l2_fract *frameperiod);
